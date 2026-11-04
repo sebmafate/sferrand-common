@@ -93,6 +93,30 @@ public class CollectionsTests
     }
 
     [TestMethod]
+    public void Comparers_TreatNullsAndSameReferencesConsistently()
+    {
+        var person = new Person("Ada", 36);
+        IEqualityComparer<Person> byName = new GenericComparer<Person>(p => p.Name);
+        IEqualityComparer<Person> byPredicate = new FuncComparer<Person>((x, y) => x.Name == y.Name);
+
+        foreach (var comparer in new[] { byName, byPredicate })
+        {
+            Assert.IsTrue(comparer.Equals(person, person));
+            Assert.IsTrue(comparer.Equals(null, null));
+            Assert.IsFalse(comparer.Equals(person, null));
+            Assert.IsFalse(comparer.Equals(null, person));
+            Assert.ThrowsExactly<ArgumentNullException>(() => comparer.GetHashCode(null!));
+        }
+    }
+
+    [TestMethod]
+    public void Comparers_RejectNullDelegates()
+    {
+        Assert.ThrowsExactly<ArgumentNullException>(() => new GenericComparer<Person>(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new FuncComparer<Person>(null!));
+    }
+
+    [TestMethod]
     public void FuncComparer_WithoutHash_StaysCorrectInHashSets()
     {
         var comparer = new FuncComparer<Person>((x, y) => x.Age / 10 == y.Age / 10);

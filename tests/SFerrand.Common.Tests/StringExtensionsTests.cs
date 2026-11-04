@@ -149,6 +149,15 @@ public class StringExtensionsTests
     }
 
     [TestMethod]
+    public void FromBase64String_DefaultsToUtf8_AndRejectsNullAndInvalidInput()
+    {
+        Assert.AreEqual("café", "Y2Fmw6k=".FromBase64String());
+        Assert.ThrowsExactly<ArgumentNullException>(() => ((string)null!).FromBase64String());
+        Assert.ThrowsExactly<ArgumentNullException>(() => ((string)null!).ToBase64String());
+        Assert.ThrowsExactly<FormatException>(() => "not base64!".FromBase64String());
+    }
+
+    [TestMethod]
     public void ToBase64String_Ascii_ReplacesNonAsciiWithQuestionMark()
         => Assert.AreEqual("TG9yP20=", "Lorêm".ToBase64String(Encoding.ASCII));
 

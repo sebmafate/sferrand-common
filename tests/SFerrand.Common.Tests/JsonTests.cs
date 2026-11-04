@@ -115,6 +115,15 @@ public class JsonTests
         => Assert.AreEqual("42", JsonSerializer.Serialize((Status)42));
 
     [TestMethod]
+    public void Enum_UndefinedValue_IsWrittenAsAKeyNumber_ButRejectedWhenReadBack()
+    {
+        var json = JsonSerializer.Serialize(new Dictionary<Status, int> { [(Status)42] = 1 });
+
+        Assert.AreEqual("""{"42":1}""", json);
+        Assert.ThrowsExactly<JsonException>(() => JsonSerializer.Deserialize<Dictionary<Status, int>>(json));
+    }
+
+    [TestMethod]
     public void Enum_RoundTrips_InsideObjects_AndNullables()
     {
         var json = JsonSerializer.Serialize(new Ticket(Status.InProgress, Status.Closed));

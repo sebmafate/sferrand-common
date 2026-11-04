@@ -67,7 +67,7 @@ public sealed class EnumMemberJsonConverter<TEnum> : JsonConverter<TEnum>
         if (_toString.TryGetValue(value, out var name))
             writer.WriteStringValue(name);
         else
-            writer.WriteNumberValue(Convert.ToInt64(value)); // undefined value: keep it round-trippable
+            writer.WriteNumberValue(Convert.ToInt64(value)); // undefined value: write its number rather than failing (reading it back is rejected, see remarks)
     }
 
     /// <inheritdoc />

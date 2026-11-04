@@ -62,6 +62,22 @@ public class ValidationAndConfigurationTests
         => Assert.HasCount(1, Validate(new Model { Items = null }));
 
     [TestMethod]
+    public void NotEmptyEnumerable_WithoutMemberName_ReportsNoMembers()
+    {
+        var context = new ValidationContext(new object()) { DisplayName = "Thing" };
+
+        var result = new NotEmptyEnumerableAttribute().GetValidationResult(Array.Empty<int>(), context);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("Thing can not be null or empty", result.ErrorMessage);
+        Assert.IsEmpty(result.MemberNames);
+    }
+
+    [TestMethod]
+    public void NotEmptyEnumerable_OnANonEnumerable_IsInvalid()
+        => Assert.IsNotNull(new NotEmptyEnumerableAttribute().GetValidationResult(42, new ValidationContext(new object()) { DisplayName = "Thing" }));
+
+    [TestMethod]
     public void NotEmptyEnumerable_CustomErrorMessage_IsUsed()
         => Assert.AreEqual("pick at least one", Validate(new CustomMessageModel { Numbers = Array.Empty<int>() })[0].ErrorMessage);
 

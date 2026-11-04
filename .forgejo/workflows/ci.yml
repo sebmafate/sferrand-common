@@ -1,0 +1,24 @@
+# Forgejo Actions workflow. Needs a registered forgejo-runner; adjust `runs-on` to one of its labels.
+# Actions are referenced by full URL so they resolve even if the instance does not mirror them.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: docker
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+      - uses: https://github.com/actions/setup-dotnet@v4
+        with:
+          # Both runtimes are needed: the tests run once per target framework (net8.0 and net10.0).
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+      - run: dotnet test --configuration Release --no-build --verbosity normal
+      - run: dotnet pack src/SFerrand.Common --configuration Release --no-build --output artifacts

@@ -198,6 +198,13 @@ public class SecretObfuscatorTests
     }
 
     [TestMethod]
+    [DataRow(".a..b@x.com", ".*..*@x.com")]
+    [DataRow("-john--doe-@x.com", "-****--***-@x.com")]
+    [DataRow("...@x.com", "...@x.com")]
+    public void ObfuscateEmail_HandlesLeadingTrailingAndRepeatedSeparators(string email, string expected)
+        => Assert.AreEqual(expected, email.ObfuscateEmail());
+
+    [TestMethod]
     [DataRow("not-an-email")]
     [DataRow("@example.com")]
     [DataRow("john@")]

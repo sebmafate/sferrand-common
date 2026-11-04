@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <MSTest>
+    <!-- A hung test must fail fast instead of blocking the pipeline. -->
+    <TestTimeout>30000</TestTimeout>
+  </MSTest>
+</RunSettings>
