@@ -9,12 +9,16 @@ namespace SFerrand.Common.Collections;
 /// var distinctByName = users.Distinct(new GenericComparer&lt;User&gt;(u =&gt; u.Name));
 /// </code>
 /// </example>
+/// <typeparam name="T">The compared type.</typeparam>
+/// <remarks>The key should be an immutable value (or a type with value equality): an object whose key changes while it sits in a hash set is lost.</remarks>
 public sealed class GenericComparer<T> : IEqualityComparer<T>
     where T : class
 {
     private readonly Func<T, object?> _keySelector;
 
-    /// <param name="keySelector">Selects the key two objects are compared on.</param>
+    /// <summary>Creates a comparer that considers two objects equal when their keys are equal.</summary>
+    /// <param name="keySelector">Selects the key two objects are compared on. Keys are compared with <see cref="object.Equals(object?, object?)"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
     public GenericComparer(Func<T, object?> keySelector)
     {
         ArgumentNullException.ThrowIfNull(keySelector);
@@ -45,14 +49,23 @@ public sealed class GenericComparer<T> : IEqualityComparer<T>
 /// A hash function consistent with the predicate is required for hash-based collections and LINQ set operations
 /// to be correct. Without one every object hashes to the same bucket: the results are right but the lookups are O(n).
 /// </remarks>
+/// <typeparam name="T">The compared type.</typeparam>
+/// <example>
+/// <code>
+/// var comparer = new FuncComparer&lt;User&gt;((a, b) => string.Equals(a.Email, b.Email, StringComparison.OrdinalIgnoreCase),
+///                                       u => StringComparer.OrdinalIgnoreCase.GetHashCode(u.Email));
+/// </code>
+/// </example>
 public sealed class FuncComparer<T> : IEqualityComparer<T>
     where T : class
 {
     private readonly Func<T, T, bool> _equals;
     private readonly Func<T, int>? _hash;
 
-    /// <param name="equals">The equality predicate.</param>
+    /// <summary>Creates a comparer from an equality predicate and an optional hash function.</summary>
+    /// <param name="equals">The equality predicate. Not called when an argument is <see langword="null"/> or both are the same reference.</param>
     /// <param name="hash">Optional hash function; equal objects must produce equal hashes.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="equals"/> is <see langword="null"/>.</exception>
     public FuncComparer(Func<T, T, bool> equals, Func<T, int>? hash = null)
     {
         ArgumentNullException.ThrowIfNull(equals);

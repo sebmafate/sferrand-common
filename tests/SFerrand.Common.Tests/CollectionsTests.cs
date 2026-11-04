@@ -2,6 +2,10 @@ using SFerrand.Common.Collections;
 
 namespace SFerrand.Common.Tests;
 
+/// <summary>
+/// Tests of the <see cref="System.Collections.Generic.IList{T}"/> extensions and of the two key-based equality comparers
+/// (consistency between <c>Equals</c> and <c>GetHashCode</c>, null handling, behaviour in hash sets and LINQ).
+/// </summary>
 [TestClass]
 public class CollectionsTests
 {
@@ -17,6 +21,9 @@ public class CollectionsTests
         CollectionAssert.AreEqual(new[] { 1, 2, 3 }, list.ToArray());
     }
 
+    /// <summary>
+    /// Enumerating a list while appending to it throws <see cref="InvalidOperationException"/>: the source is materialized first.
+    /// </summary>
     [TestMethod]
     public void AddRange_WithItselfAsSource_DoesNotThrow()
     {
@@ -116,6 +123,9 @@ public class CollectionsTests
         Assert.ThrowsExactly<ArgumentNullException>(() => new FuncComparer<Person>(null!));
     }
 
+    /// <summary>
+    /// Without a hash function every object lands in the same bucket: slow (O(n)) but still correct, which is what the remarks of the type promise.
+    /// </summary>
     [TestMethod]
     public void FuncComparer_WithoutHash_StaysCorrectInHashSets()
     {

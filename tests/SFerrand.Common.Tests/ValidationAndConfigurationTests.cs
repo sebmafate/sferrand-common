@@ -6,6 +6,10 @@ using SFerrand.Common.Extensions;
 
 namespace SFerrand.Common.Tests;
 
+/// <summary>
+/// Tests of <see cref="Attributes.NotEmptyEnumerableAttribute"/> through the real <see cref="System.ComponentModel.DataAnnotations.Validator"/>,
+/// and of the configuration source ordering helper (with real temporary JSON files, not mocks).
+/// </summary>
 [TestClass]
 public class ValidationAndConfigurationTests
 {
@@ -34,6 +38,9 @@ public class ValidationAndConfigurationTests
     public void NotEmptyEnumerable_WithElements_IsValid()
         => Assert.IsEmpty(Validate(new Model { Items = new[] { "a" } }));
 
+    /// <summary>
+    /// The attribute only needs to know that one element exists: an infinite or expensive sequence must be accepted after reading a single item.
+    /// </summary>
     [TestMethod]
     public void NotEmptyEnumerable_WithLazySequence_IsValidWithoutFullEnumeration()
     {
@@ -104,6 +111,10 @@ public class ValidationAndConfigurationTests
             builder.Sources.OfType<JsonConfigurationSource>().Select(s => s.Path).ToArray());
     }
 
+    /// <summary>
+    /// End-to-end proof, not just a source-order check: the same key is defined by the JSON file and by a source registered after it;
+    /// after reordering, the JSON value is the one the built configuration returns.
+    /// </summary>
     [TestMethod]
     public void PrioritizeAppSettings_LetsTheJsonFileWinOverEarlierSources()
     {

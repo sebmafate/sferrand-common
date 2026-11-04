@@ -3,6 +3,10 @@ using SFerrand.Common.Extensions;
 
 namespace SFerrand.Common.Tests;
 
+/// <summary>
+/// Tests of <see cref="Extensions.StringExtensions"/>: the seven case conventions on identifiers of every shape (acronyms, digits, separators,
+/// accents), the null/empty fallbacks, strict Base64 validation and diacritics removal.
+/// </summary>
 [TestClass]
 public class StringExtensionsTests
 {
@@ -10,6 +14,9 @@ public class StringExtensionsTests
 
     #region Case conversion
 
+    /// <summary>
+    /// One table drives all the conventions, so the word-splitting rules are checked once and the outputs stay consistent with each other.
+    /// </summary>
     [TestMethod]
     [DataRow(Sentence, "IpsumSedNibhLobortis", "ipsumSedNibhLobortis", "ipsum_sed_nibh_lobortis", "IPSUM_SED_NIBH_LOBORTIS", "ipsum-sed-nibh-lobortis", "IPSUM-SED-NIBH-LOBORTIS", "Ipsum-Sed-Nibh-Lobortis")]
     [DataRow("helloWorld", "HelloWorld", "helloWorld", "hello_world", "HELLO_WORLD", "hello-world", "HELLO-WORLD", "Hello-World")]
@@ -114,6 +121,9 @@ public class StringExtensionsTests
     public void IsBase64String_OnValid_ReturnsTrue(string value)
         => Assert.IsTrue(value.IsBase64String());
 
+    /// <summary>
+    /// The validation is deliberately strict: wrong padding, wrong length, URL-safe alphabet and any whitespace (even a trailing newline) are rejected.
+    /// </summary>
     [TestMethod]
     [DataRow("")]
     [DataRow(" ")]
@@ -157,6 +167,9 @@ public class StringExtensionsTests
         Assert.ThrowsExactly<FormatException>(() => "not base64!".FromBase64String());
     }
 
+    /// <summary>
+    /// Documents a property of the chosen encoding rather than of the library: with ASCII, characters outside the range are lossy (<c>?</c>), which is why UTF-8 is the default.
+    /// </summary>
     [TestMethod]
     public void ToBase64String_Ascii_ReplacesNonAsciiWithQuestionMark()
         => Assert.AreEqual("TG9yP20=", "Lorêm".ToBase64String(Encoding.ASCII));

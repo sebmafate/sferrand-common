@@ -6,8 +6,13 @@ namespace SFerrand.Common.Security;
 /// Helpers that mask sensitive values (secrets, credentials, e-mails, identifiers) so they can be logged safely.
 /// </summary>
 /// <remarks>
-/// Every method is fail-safe: when the input does not have the expected structure, the whole value is masked
+/// Every method is fail-safe: when the input does not have the expected structure, the value is masked <b>as a whole</b>
+/// (only the adaptive leading/trailing characters of <see cref="GetNumberOfPreservedChars"/> stay visible)
 /// rather than returned as is, and none of them throws on malformed input.
+/// <para>
+/// Masking is length-preserving and deterministic (same input, same output), so masked values stay comparable
+/// across log lines. It is a logging aid, <b>not</b> a security boundary: never use it to "protect" data at rest or in transit.
+/// </para>
 /// </remarks>
 public static class SecretObfuscator
 {
@@ -46,6 +51,14 @@ public static class SecretObfuscator
     /// If the requested leading and trailing counts would reveal the whole value, the adaptive default is used instead,
     /// so a value is never returned in clear text.
     /// </remarks>
+    /// <example>
+    /// <code>
+    /// "aSuperMegaLongSecret".Obfuscate();            // aSup************cret
+    /// "aSuperMegaLongSecret".Obfuscate(2, 0);        // aS******************
+    /// "abc".Obfuscate();                             // ***   (too short to show anything)
+    /// "hunter2".Obfuscate(10, 10);                   // h*****2   (asked to show everything: adaptive default instead)
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(input))]
     public static string? Obfuscate(this string? input, int? nbLeading = null, int? nbTrailing = null, char mask = DefaultMask)
     {
@@ -77,6 +90,12 @@ public static class SecretObfuscator
     /// <item>when it does not look like <c>scheme://...</c>: the whole value, masked.</item>
     /// </list>
     /// </returns>
+    /// <example>
+    /// <code>
+    /// "postgres://app:s3cr3t-pass@db:5432/shop".ObfuscateUri();   // postgres://app:s3*******ss@db:5432/shop
+    /// "https://example.com/path".ObfuscateUri();                  // unchanged
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(uri))]
     public static string? ObfuscateUri(this string? uri)
     {
@@ -126,6 +145,12 @@ public static class SecretObfuscator
     /// The connection string with the value masked, or the whole string masked when <paramref name="key"/> is
     /// empty or not found. Values containing a quoted <c>;</c> are not supported.
     /// </returns>
+    /// <example>
+    /// <code>
+    /// "AccountName=acme;AccountKey=averysecretkey==".ObfuscateConnectionString("AccountKey");
+    /// // AccountName=acme;AccountKey=av************==
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(connectionString))]
     public static string? ObfuscateConnectionString(this string? connectionString, string? key, int? nbLeading = null, int? nbTrailing = null, char mask = DefaultMask)
     {
@@ -167,7 +192,13 @@ public static class SecretObfuscator
     /// Optional predicate receiving the address: when it returns <see langword="true"/> the address is returned
     /// unchanged (mailing lists, technical accounts, public domains...).
     /// </param>
-    /// <returns>The obfuscated address. A value that is not a valid <c>local@domain</c> shape is fully masked.</returns>
+    /// <returns>The obfuscated address. A value that is not a valid <c>local@domain</c> shape is masked as a whole.</returns>
+    /// <example>
+    /// <code>
+    /// "jean-claude.van-damme@example.com".ObfuscateEmail();   // ****-c****e.***-d***e@example.com
+    /// "not an email".ObfuscateEmail();                        // no********il   (masked as a whole: only the adaptive leading/trailing characters stay visible)
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(email))]
     public static string? ObfuscateEmail(this string? email, int? nbLeading = null, int? nbTrailing = null, char mask = DefaultMask, Func<string, bool>? shouldSkip = null)
     {
@@ -214,7 +245,12 @@ public static class SecretObfuscator
     /// <param name="nbLeading">Characters kept at the start of each masked group.</param>
     /// <param name="nbTrailing">Characters kept at the end of each masked group.</param>
     /// <param name="mask">The masking character.</param>
-    /// <returns>The obfuscated GUID. A value that is not a canonical GUID is fully masked.</returns>
+    /// <returns>The obfuscated GUID. A value that is not a canonical GUID is masked as a whole.</returns>
+    /// <example>
+    /// <code>
+    /// "3f2504e0-4f89-11d3-9a0c-0305e82c3301".ObfuscateGuid();   // 3******0-****-11d3-****-03********01
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(guid))]
     public static string? ObfuscateGuid(this string? guid, int? nbLeading = null, int? nbTrailing = null, char mask = DefaultMask)
     {
@@ -245,7 +281,13 @@ public static class SecretObfuscator
     /// <param name="nbLeading">Characters kept after the prefix.</param>
     /// <param name="nbTrailing">Characters kept at the end.</param>
     /// <param name="mask">The masking character.</param>
-    /// <param name="knownPrefixes">Prefixes to keep visible. <see langword="null"/> uses <see cref="KnownTokenPrefixes"/>.</param>
+    /// <param name="knownPrefixes">Prefixes to keep visible (case-insensitive, the longest match wins). <see langword="null"/> uses <see cref="KnownTokenPrefixes"/>.</param>
+    /// <example>
+    /// <code>
+    /// "ghp_1234567890abcdefghijklmnop".ObfuscateToken();                                  // ghp_1234******************mnop
+    /// "sk-live-abcdefghijklmnop".ObfuscateToken(knownPrefixes: new[] { "sk-live-" });     // sk-live-ab************op
+    /// </code>
+    /// </example>
     [return: NotNullIfNotNull(nameof(token))]
     public static string? ObfuscateToken(this string? token, int? nbLeading = null, int? nbTrailing = null, char mask = DefaultMask, IEnumerable<string>? knownPrefixes = null)
     {

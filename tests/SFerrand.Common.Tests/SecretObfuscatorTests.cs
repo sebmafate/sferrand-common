@@ -2,6 +2,11 @@ using SFerrand.Common.Security;
 
 namespace SFerrand.Common.Tests;
 
+/// <summary>
+/// Example-based tests of <see cref="Security.SecretObfuscator"/>: exact expected outputs for each method, the adaptive thresholds and
+/// every fail-safe path (null, empty, malformed input). Properties that must hold for <i>any</i> input live in
+/// <see cref="ObfuscatorInvariantTests"/>.
+/// </summary>
 [TestClass]
 public class SecretObfuscatorTests
 {
@@ -67,6 +72,9 @@ public class SecretObfuscatorTests
     public void Obfuscate_TooManyLeadingAndTrailing_FallsBackToAdaptive()
         => Assert.AreEqual("so***********et", "somethingsecret".Obfuscate(nbLeading: 9, nbTrailing: 6));
 
+    /// <summary>
+    /// Asking to keep 2 + 2 characters of a 4-character value would return it in clear: the adaptive default (0 for four characters) applies instead.
+    /// </summary>
     [TestMethod]
     public void Obfuscate_ShortValueWithGenerousCounts_NeverRevealsEverything()
         => Assert.AreEqual("****", "abcd".Obfuscate(nbLeading: 2, nbTrailing: 2));
@@ -130,6 +138,9 @@ public class SecretObfuscatorTests
     public void ObfuscateConnectionString_MasksOnlyTheRequestedKey(string key, string expected)
         => Assert.AreEqual(expected, StorageConnectionString.ObfuscateConnectionString(key));
 
+    /// <summary>
+    /// Fail-safe: if the caller names a key that is not present (typo, different casing convention in the source), the string is masked as a whole instead of being logged untouched.
+    /// </summary>
     [TestMethod]
     [DataRow("")]
     [DataRow("   ")]
@@ -145,6 +156,10 @@ public class SecretObfuscatorTests
         Assert.EndsWith(".net", masked);
     }
 
+    /// <summary>
+    /// Real storage keys are Base64: they contain <c>=</c> padding and <c>/</c>. Only the first <c>=</c> of a segment separates key from value,
+    /// so the rest of the value must be masked, not mistaken for another pair. (The key used is the well-known public development key of the Azurite emulator.)
+    /// </summary>
     [TestMethod]
     public void ObfuscateConnectionString_KeepsAzuriteLikeValuesContainingEqualsAndSlash()
     {
@@ -197,6 +212,10 @@ public class SecretObfuscatorTests
         Assert.AreEqual("****.***@example.com", "john.doe@example.com".ObfuscateEmail(shouldSkip: IsTeamMailbox));
     }
 
+    /// <summary>
+    /// Each alphanumeric run is masked on its own and separators are kept as is, including leading, trailing and repeated ones;
+    /// a run too short to mask anything (a single character) stays masked, an address with no run at all is unchanged.
+    /// </summary>
     [TestMethod]
     [DataRow(".a..b@x.com", ".*..*@x.com")]
     [DataRow("-john--doe-@x.com", "-****--***-@x.com")]
@@ -204,6 +223,9 @@ public class SecretObfuscatorTests
     public void ObfuscateEmail_HandlesLeadingTrailingAndRepeatedSeparators(string email, string expected)
         => Assert.AreEqual(expected, email.ObfuscateEmail());
 
+    /// <summary>
+    /// Logging code must never throw because of a bad value: malformed addresses are masked as a whole, with their length preserved.
+    /// </summary>
     [TestMethod]
     [DataRow("not-an-email")]
     [DataRow("@example.com")]
@@ -259,6 +281,9 @@ public class SecretObfuscatorTests
     public void ObfuscateToken_CustomPrefixes()
         => Assert.AreEqual("xoxb-12************ef", "xoxb-1234567890abcdef".ObfuscateToken(knownPrefixes: new[] { "xoxb-" }));
 
+    /// <summary>
+    /// A token that is nothing but its prefix has no body to keep; treating it as an unknown format masks it entirely.
+    /// </summary>
     [TestMethod]
     public void ObfuscateToken_PrefixOnly_IsFullyMasked()
         => Assert.AreEqual("****", "ghp_".ObfuscateToken());

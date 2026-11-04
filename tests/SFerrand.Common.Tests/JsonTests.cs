@@ -5,6 +5,10 @@ using SFerrand.Common.Extensions;
 
 namespace SFerrand.Common.Tests;
 
+/// <summary>
+/// Tests of the <see cref="System.Text.Json.JsonSerializer"/> shortcuts and of <see cref="Extensions.EnumMemberJsonConverter{TEnum}"/>
+/// (names, <c>EnumMember</c> values, numbers, dictionary keys, nullable and nested usage).
+/// </summary>
 [TestClass]
 public class JsonTests
 {
@@ -50,6 +54,9 @@ public class JsonTests
         Assert.AreEqual(100, sample.Value);
     }
 
+    /// <summary>
+    /// The default-value parameter exists so the compiler can infer an anonymous type from a template instance.
+    /// </summary>
     [TestMethod]
     public void ToObject_InfersAnonymousTypes()
     {
@@ -114,6 +121,10 @@ public class JsonTests
     public void Enum_Write_UndefinedValue_FallsBackToNumber()
         => Assert.AreEqual("42", JsonSerializer.Serialize((Status)42));
 
+    /// <summary>
+    /// Documents an asymmetry on purpose: writing never fails (a log or a response must not break on an unexpected value), but reading
+    /// refuses numbers that are not defined members, so a corrupted value is never silently accepted as valid.
+    /// </summary>
     [TestMethod]
     public void Enum_UndefinedValue_IsWrittenAsAKeyNumber_ButRejectedWhenReadBack()
     {

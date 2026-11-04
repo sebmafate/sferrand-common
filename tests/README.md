@@ -1,0 +1,48 @@
+# Test suite
+
+206 tests, MSTest 4, run on `net8.0` and `net10.0`. No test needs the Internet, a network or a fixed path. This page explains
+how the suite is organized and how to add to it; how to run it is in [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## Strategy
+
+| Class | Kind | What it protects |
+|---|---|---|
+| `SecretObfuscatorTests` | Examples | Exact expected output for every masking method, the adaptive thresholds, and each fail-safe path (null, empty, malformed). The examples double as living documentation of the exact output formats. |
+| `ObfuscatorInvariantTests` | Properties | Guarantees that must hold for *any* input, checked on thousands of random inputs per property: length preserved, never a whole value revealed, a password/secret never leaks through a URI, connection string, e-mail, GUID or token. |
+| `StringExtensionsTests` | Examples + tables | The case conventions on identifiers of every shape (acronyms, digits, separators, accents), fallbacks, strict Base64, diacritics. |
+| `JsonTests` | Examples | The JSON shortcuts and `EnumMemberJsonConverter<T>` (names, `EnumMember` values, numbers, dictionary keys, nullable/nested use). |
+| `CollectionsTests` | Examples | `IList<T>` operations and the key-based comparers (hash/equality consistency, nulls, behaviour in hash sets and LINQ). |
+| `ValidationAndConfigurationTests` | Examples | `[NotEmptyEnumerable]` through the real `Validator`; `PrioritizeAppSettings` with real temporary JSON files. |
+
+## Property tests
+
+`ObfuscatorInvariantTests` generates inputs with `System.Random` and a **fixed seed**, so every run is identical and a failure
+is reproducible. The assertion messages include the offending input and the leading/trailing counts used. To explore more
+widely, raise `Iterations` or change a seed locally; if that finds a bug, keep the failing input as a regular example in
+`SecretObfuscatorTests`.
+
+Why properties for this library: a masking helper that works on the examples a developer thought of but leaks on an
+unusual length is worse than none. The properties state the contract ("never reveals a whole value") rather than outputs.
+
+## Conventions
+
+- **Name = behaviour**: `Subject_Condition_ExpectedOutcome` (`ObfuscateToken_PrefixOnly_IsFullyMasked`). A failing test name should tell
+  you what broke without opening the file.
+- **One reason to fail** per test. `[DataRow]` tables are used when only the data varies.
+- **Document the why**: every class has a summary, and tests whose purpose is not obvious from the name carry an XML summary
+  explaining which trap they guard against. If you add a test for a subtle case, do the same.
+- Tests are independent and run **in parallel** at method level (`MSTestSettings.cs`).
+- A **30 s timeout** per test (`test.runsettings`) turns a hang into a failure instead of a blocked pipeline.
+- Test secrets are obviously fake. Keep them shorter than real token formats so secret scanners do not flag the repository.
+- The Azure-storage-like key used in one test is the publicly documented development key of the Azurite emulator, not a credential.
+
+## Coverage
+
+100 % of lines and about 98 % of branches at 1.0.0 (command in CONTRIBUTING). Coverage tells you code ran, not that it is
+checked; the property tests and the manual mutation procedure in CONTRIBUTING cover that gap.
+
+## Known limits
+
+- The `net8.0` run uses the .NET 8 runtime only when it is installed (CI does). Locally it may roll forward.
+- The properties are statistical: they sample the input space, they do not prove the contract.
+- Behaviour with culture-specific text (for example Turkish dotted/dotless `i`) is only covered through the invariant-culture code paths the library uses.

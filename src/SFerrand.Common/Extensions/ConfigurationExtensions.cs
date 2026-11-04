@@ -17,6 +17,18 @@ public static class ConfigurationExtensions
     /// Sources are matched by exact type (<see cref="JsonConfigurationSource"/>) and keep their relative order.
     /// Call it after every source has been added: sources added afterwards still take precedence.
     /// </remarks>
+    /// <example>
+    /// <code>
+    /// var config = new ConfigurationBuilder()
+    ///     .AddJsonFile("appsettings.json")
+    ///     .AddEnvironmentVariables()
+    ///     .PrioritizeAppSettings()   // appsettings.json now overrides the environment
+    ///     .Build();
+    /// </code>
+    /// </example>
+    /// <param name="builder">The builder to reorder.</param>
+    /// <returns><paramref name="builder"/>, for chaining.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
     public static IConfigurationBuilder PrioritizeAppSettings(this IConfigurationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
