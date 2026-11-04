@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>SFerrand.Common</RootNamespace>
+
+    <PackageId>SFerrand.Common</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Sébastien Ferrand</Authors>
+    <Description>Small, dependency-light helpers for .NET: secret/PII obfuscation for logs, string case conversion, Base64 and diacritics helpers, JSON helpers, an EnumMember-aware JSON enum converter, key-based equality comparers and configuration source ordering.</Description>
+    <PackageTags>obfuscation;masking;secrets;logging;string-extensions;json;case-conversion</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="SFerrand.Common.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+  </ItemGroup>
+
+</Project>
