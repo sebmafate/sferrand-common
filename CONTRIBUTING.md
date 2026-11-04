@@ -50,6 +50,8 @@ should not lower either number without a reason stated in the pull request.
   never throw on a bad value: a logging helper that fails turns a diagnostic into an incident.
 - Keep the dependency list short (two `Microsoft.Extensions.Configuration` packages today); a new package needs a justification.
 - No culture-sensitive operations: use the invariant or ordinal variants.
+- Regular expressions in `SecretRedactor` must keep every repetition **bounded** before the part that anchors the match. Do not switch them to `RegexOptions.NonBacktracking`
+  (see docs/DESIGN.md); the hostile-input tests will tell you if a pattern becomes quadratic.
 
 ## Mutation check (manual)
 
@@ -59,7 +61,11 @@ purpose in a scratch copy and make sure a test goes red:
 - change a threshold of `GetNumberOfPreservedChars` by one;
 - let `ObfuscateUri` keep the password, or `Obfuscate` keep one character too many;
 - invert `leading + trailing >= input.Length`, the guard that prevents revealing a whole value;
-- drop the prefix handling of `ObfuscateToken`.
+- drop the prefix handling of `ObfuscateToken`;
+- raise a ceiling of `FinancialObfuscator` (6 + 4 for cards) or accept a character class it should reject;
+- change a weight or constant of a check digit (`Checksums`), the order or a guard of `SecretRedactor`, or an entry of `SensitiveKeys`;
+- **validate your harness on an obviously wrong mutation first**, and read each survivor: a mutant that cannot change behaviour (an unbounded repetition that is still linear)
+  is equivalent, not a missing test.
 
 A mutation that survives means a missing or weak test: add one. The seeded property tests in `ObfuscatorInvariantTests`
 exist precisely because hand-picked examples are easy to satisfy by accident.
