@@ -23,6 +23,13 @@ to edit in a project file.
   in logs), which must be called out in the changelog.
 - **Patch**: bug fixes that make a method match its documentation, and documentation.
 
+### Source links
+
+The symbols carry links to the source of the exact commit, for both hosts: `Microsoft.SourceLink.GitHub` for github.com, and `Microsoft.SourceLink.Gitea` for the Forgejo server,
+whose host is declared in the project (`SourceLinkGiteaHost`). The Gitea provider is generic: while it is the only provider it accepts any host, but with two providers it must be
+told which host is its own. If you move the Forgejo server, change that line. The links are built from the `origin` remote of the checkout, which is why the Forgejo release workflow
+resets it to the public URL first.
+
 ## One-time setup
 
 1. **A runner.** Workflows need a registered `forgejo-runner`. Set `runs-on` in `.forgejo/workflows/*.yml` to one of its labels
