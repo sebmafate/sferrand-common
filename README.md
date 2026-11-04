@@ -18,8 +18,9 @@ dotnet add package SFerrand.Common
 
 ## Masking secrets
 
-Every method is fail-safe: if the input does not have the expected shape, the **whole** value is masked rather
-than returned in clear, and nothing throws on malformed input. By default the number of visible characters adapts
+Every method is fail-safe: if the input does not have the expected shape, the value is masked **as a whole**
+(only the few adaptive leading/trailing characters stay visible) rather than returned in clear, and nothing throws on malformed input.
+Masking is deterministic and length-preserving: it is a logging aid, not a security boundary. By default the number of visible characters adapts
 to the length (none up to 4 characters, 1 up to 8, 2 up to 16, 4 above) so short secrets are never exposed.
 
 ```csharp
@@ -97,13 +98,21 @@ var config = new ConfigurationBuilder()
     .Build();
 ```
 
+## Documentation
+
+- **API reference**: every public member is documented with XML comments (shipped in the package, so IntelliSense shows them).
+- [Design notes](docs/DESIGN.md): why it works this way, what was rejected, known limits.
+- [Test suite](tests/README.md): strategy, property tests, conventions.
+- [Contributing](CONTRIBUTING.md), [Changelog](CHANGELOG.md) and [Releasing](RELEASING.md) (versioning and publication of the NuGet package).
+
 ## Build and test
 
 ```
 dotnet test
 ```
 
-The library targets `net8.0` and `net10.0`; the test project runs on `net10.0`.
+The library and its tests target `net8.0` and `net10.0`. The tests run on both when both runtimes are installed (as in CI);
+otherwise the `net8.0` run rolls forward to the newest runtime. Coverage and mutation-check procedures are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## License
 

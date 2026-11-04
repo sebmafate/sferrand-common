@@ -1,0 +1,71 @@
+# Publishes the NuGet package when a version tag (v1.2.3) is pushed. See RELEASING.md.
+#
+# Secrets to define in the repository settings (Settings > Actions > Secrets):
+#   PACKAGES_USER   your Forgejo user name
+#   PACKAGES_TOKEN  an access token with the write:package scope
+#   NUGET_API_KEY   (optional) a nuget.org API key; when set, the package is also pushed to nuget.org
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: docker   # adjust to one of your runner labels
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer computes the version from the tags: it needs the whole history
+      - uses: https://github.com/actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Check the tag
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
+          fi
+          echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+
+      - name: Point the remote at the public URL
+        # SourceLink derives the source links embedded in the symbols from the "origin" remote. On a runner it is often an
+        # internal address (http://forgejo:3000/...) that consumers cannot reach, so use the public one.
+        run: git remote set-url origin "https://git.vbmaf.net/${GITHUB_REPOSITORY}.git"
+
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+      - run: dotnet test --configuration Release --no-build
+      - run: dotnet pack src/SFerrand.Common --configuration Release --no-build --output artifacts
+
+      - name: Check the package version matches the tag
+        shell: bash
+        run: |
+          test -f "artifacts/SFerrand.Common.${VERSION}.nupkg" || { echo "::error::expected artifacts/SFerrand.Common.${VERSION}.nupkg, got:"; ls artifacts; exit 1; }
+
+      - uses: https://github.com/actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*
+
+      - name: Push to the Forgejo package registry
+        env:
+          PACKAGES_USER: ${{ secrets.PACKAGES_USER }}
+          PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+        shell: bash
+        run: |
+          dotnet nuget add source "${GITHUB_SERVER_URL}/api/packages/${PACKAGES_USER}/nuget/index.json" \
+            --name forgejo --username "$PACKAGES_USER" --password "$PACKAGES_TOKEN" --store-password-in-clear-text
+          dotnet nuget push "artifacts/*.nupkg" --source forgejo --skip-duplicate
+
+      - name: Push to nuget.org (only if NUGET_API_KEY is set)
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then echo "NUGET_API_KEY not set: skipping nuget.org"; exit 0; fi
+          dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate

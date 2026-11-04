@@ -1,0 +1,50 @@
+# Publishes the NuGet package to nuget.org when a version tag (v1.2.3) is pushed. See RELEASING.md.
+# Secret to define: NUGET_API_KEY (a nuget.org API key scoped to the SFerrand.* packages).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer computes the version from the tags: it needs the whole history
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Check the tag
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
+          fi
+          echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+      - run: dotnet test --configuration Release --no-build
+      - run: dotnet pack src/SFerrand.Common --configuration Release --no-build --output artifacts
+
+      - name: Check the package version matches the tag
+        shell: bash
+        run: |
+          test -f "artifacts/SFerrand.Common.${VERSION}.nupkg" || { echo "::error::expected artifacts/SFerrand.Common.${VERSION}.nupkg, got:"; ls artifacts; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*
+
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: bash
+        run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
