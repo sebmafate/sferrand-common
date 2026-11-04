@@ -27,6 +27,7 @@ public class ChecksumsTests
     [DataRow("4111111111111112")]    // last digit changed
     [DataRow("4111111111111121")]    // two adjacent digits swapped
     [DataRow("1")]                   // a single digit is not a number to check
+    [DataRow("0")]                   // ...not even the one whose Luhn sum is zero
     [DataRow("")]
     [DataRow("   ")]
     [DataRow("41111111111111a1")]
@@ -70,6 +71,17 @@ public class ChecksumsTests
     [TestMethod]
     public void IsValidIban_TooLong_IsFalse()
         => Assert.IsFalse(("DE89" + new string('0', 31)).IsValidIban());
+
+    /// <summary>
+    /// The length limits cannot be tested with numbers that fail the mod 97 check anyway. These three have a <b>valid</b> check (computed independently), so only
+    /// their length decides: 14 characters is one below the shortest IBAN, 34 the longest, 35 one above.
+    /// </summary>
+    [TestMethod]
+    [DataRow("AB89ABCDEFGHIJ", false)]                                        // 14
+    [DataRow("AB09ABCDEFGHIJKLMNOPQRSTUVWXYZ0123", true)]                     // 34
+    [DataRow("AB13ABCDEFGHIJKLMNOPQRSTUVWXYZ01234", false)]                   // 35
+    public void IsValidIban_LengthLimits_AreEnforced_EvenWithAValidCheck(string iban, bool expected)
+        => Assert.AreEqual(expected, iban.IsValidIban());
 
     [TestMethod]
     public void IsValidIban_Null_IsFalse()

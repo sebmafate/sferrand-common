@@ -133,7 +133,12 @@ public class SecretRedactorTests
     [TestMethod]
     [DataRow("id=4111111111111112")]                // Luhn fails
     [DataRow("ts=1700000000000")]                   // 13 digits, starts with 1
-    [DataRow("ts=1700000000018")]                   // same, even if it happened to pass Luhn
+    [DataRow("ts=1700000000004")]                   // same, and this one does pass Luhn: only its first digit tells it is not a card
+    [DataRow("n=0234567890123454")]                 // Luhn-valid 16 digits, one per first digit that no payment network uses
+    [DataRow("n=1234567890123452")]
+    [DataRow("n=7234567890123459")]
+    [DataRow("n=8234567890123457")]
+    [DataRow("n=9234567890123455")]
     [DataRow("on 2024-05-12 at 10:30, 42 items")]
     [DataRow("order 123456789012345678")]
     [DataRow("phone 0123456789")]
@@ -277,6 +282,11 @@ public class SecretRedactorTests
         Assert.AreEqual("to abcd" + Stars(18) + "wxyz@example.com now", once);
         Assert.AreEqual(once, once.Redact());
     }
+
+    /// <summary>The guard also holds at the very start of the text: nothing before the address, only a mask character.</summary>
+    [TestMethod]
+    public void AnAddressRightAfterAMaskAtTheStartOfTheText_IsNotMaskedAgain()
+        => Assert.AreEqual("*wxyz@example.com", "*wxyz@example.com".Redact());
 
     [TestMethod]
     public void Redacting_Twice_GivesTheSameText()

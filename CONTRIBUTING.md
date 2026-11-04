@@ -64,7 +64,9 @@ purpose in a scratch copy and make sure a test goes red:
 - drop the prefix handling of `ObfuscateToken`;
 - raise a ceiling of `FinancialObfuscator` (6 + 4 for cards) or accept a character class it should reject;
 - change a weight or constant of a check digit (`Checksums`), the order or a guard of `SecretRedactor`, or an entry of `SensitiveKeys`;
-- **validate your harness on an obviously wrong mutation first**, and read each survivor: a mutant that cannot change behaviour (an unbounded repetition that is still linear)
+- **classify by the exit code of `dotnet test`, never by parsing its (localized) output, and validate the harness with both kinds of control**: a mutation that does nothing
+  (it must *survive*) and an obviously wrong one (it must be *killed*). A harness that parsed the French console text reported every mutant as killed, including the one that
+  did nothing, and hid thirteen real gaps; and read each survivor: a mutant that cannot change behaviour (an unbounded repetition that is still linear)
   is equivalent, not a missing test.
 
 A mutation that survives means a missing or weak test: add one. The seeded property tests in `ObfuscatorInvariantTests`

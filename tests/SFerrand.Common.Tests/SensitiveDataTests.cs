@@ -44,6 +44,16 @@ public class SensitiveDataTests
         public string Plain { get; set; } = "";
     }
 
+    public class VirtualBase
+    {
+        [SensitiveData] public virtual string? Secret { get; set; }
+    }
+
+    public class OverridingChild : VirtualBase
+    {
+        public override string? Secret { get; set; }   // does not repeat the attribute
+    }
+
     public class Holder
     {
         public Account? Account { get; set; }
@@ -164,6 +174,18 @@ public class SensitiveDataTests
         var json = JsonDocument.Parse(new Child { Plain = "visible", Secret = "abcdefghijklmnop" }.ToSafeJsonString()).RootElement;
 
         Assert.AreEqual("visible", json.GetProperty("Plain").GetString());
+        Assert.AreEqual("ab************op", json.GetProperty("Secret").GetString());
+    }
+
+    /// <summary>
+    /// A property that is overridden without repeating the attribute is still the same sensitive property. <c>MemberInfo.GetCustomAttributes</c>
+    /// ignores <c>inherit</c> for properties, so the first version of the modifier would have written it in clear.
+    /// </summary>
+    [TestMethod]
+    public void AnOverriddenSensitiveProperty_StaysMasked()
+    {
+        var json = JsonDocument.Parse(new OverridingChild { Secret = "abcdefghijklmnop" }.ToSafeJsonString()).RootElement;
+
         Assert.AreEqual("ab************op", json.GetProperty("Secret").GetString());
     }
 

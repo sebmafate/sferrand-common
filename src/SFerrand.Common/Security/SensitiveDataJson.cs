@@ -41,8 +41,11 @@ public static class SensitiveDataJson
 
         foreach (var property in typeInfo.Properties)
         {
-            var attribute = property.AttributeProvider?.GetCustomAttributes(typeof(SensitiveDataAttribute), inherit: true)
-                .OfType<SensitiveDataAttribute>().FirstOrDefault();
+            // Attribute.GetCustomAttribute honours `inherit` for properties; MemberInfo.GetCustomAttributes ignores it for them, so an override
+            // that does not repeat the attribute would have been written in clear.
+            var attribute = property.AttributeProvider is MemberInfo member
+                ? Attribute.GetCustomAttribute(member, typeof(SensitiveDataAttribute), inherit: true) as SensitiveDataAttribute
+                : property.AttributeProvider?.GetCustomAttributes(typeof(SensitiveDataAttribute), inherit: true).OfType<SensitiveDataAttribute>().FirstOrDefault();
             if (attribute is null)
                 continue;
 

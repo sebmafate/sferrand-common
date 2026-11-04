@@ -195,6 +195,7 @@ public class SensitiveKeysTests
     [DataRow("access%5ftoken=abcdefghijklmnop", "access%5ftoken=ab************op")]
     [DataRow("client+secret=abcdefghijklmnop", "client+secret=ab************op")]
     [DataRow("%70assword=abcdefghijklmnop", "%70assword=ab************op")]
+    [DataRow("pass+word=abcdefghijklmnop", "pass+word=ab************op")]    // '+' is a space, which the name normalization then removes
     public void ObfuscateQuery_DecodesTheParameterNameBeforeMatching(string query, string expected)
         => Assert.AreEqual(expected, query.ObfuscateQuery());
 

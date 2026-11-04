@@ -1,6 +1,6 @@
 # Test suite
 
-622 tests, MSTest 4, run on `net8.0` and `net10.0`. No test needs the Internet, a network or a fixed path. This page explains
+634 tests, MSTest 4, run on `net8.0` and `net10.0`. No test needs the Internet, a network or a fixed path. This page explains
 how the suite is organized and how to add to it; how to run it is in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Strategy
