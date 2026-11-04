@@ -42,9 +42,8 @@ resets it to the public URL first.
    | `PACKAGES_TOKEN` | an access token with the **write:package** scope (Settings, Applications) |
    | `NUGET_API_KEY` | *optional*: a nuget.org API key; when present, the release is also pushed to nuget.org |
 
-3. **nuget.org (optional).** Create an API key limited to the packages you publish; reserve the `SFerrand.*` prefix
-   on nuget.org first so nobody else can publish under it. The `.github/workflows/release.yml` file does the same
-   for a GitHub mirror and only needs `NUGET_API_KEY`.
+3. **nuget.org (optional).** From Forgejo, only with an API key (`NUGET_API_KEY` above), which is a long-lived secret. The GitHub workflow publishes with
+   Trusted Publishing and needs no key: see "Setting up nuget.org" below.
 
 ## Releasing a version
 
@@ -69,9 +68,31 @@ resets it to the public URL first.
    (and to nuget.org if `NUGET_API_KEY` is set). `--skip-duplicate` makes a re-run harmless.
 6. Check the package appears under the user's *Packages* page.
 
-On GitHub, the same tag runs `.github/workflows/release.yml`: it builds, tests and packs, then creates a **GitHub release** named after the tag, whose notes are the
-matching section of the changelog and which carries the `.nupkg` and `.snupkg` files. It pushes to nuget.org only when the secret `NUGET_API_KEY` exists.
-Without a Forgejo runner, the `.nupkg` files of that release can be pushed to the Forgejo registry by hand:
+On GitHub, the same tag runs `.github/workflows/release.yml`. The **build** job builds, tests and packs, then creates a **GitHub release** named after the tag, whose notes are the
+matching section of the changelog and which carries the `.nupkg` and `.snupkg` files. The **nuget** job then pushes to nuget.org with
+[Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing): no API key is stored, GitHub proves the identity of the workflow and nuget.org
+answers with a key valid for one hour.
+
+### Setting up nuget.org (once per repository)
+
+1. Reserve the `SFerrand.*` prefix on nuget.org.
+2. nuget.org, your user name, **Trusted Publishing**, add a policy: repository owner `sebmafate`, this repository, workflow file `release.yml` (the name only),
+   environment `nuget`, and a scope that allows **new packages** (pattern `SFerrand.*`). A policy on a private repository is only *temporarily* active for 7 days, until the first
+   successful publication fixes the repository identity; it can be restarted.
+3. GitHub, Settings, Environments: create the environment **`nuget`** and add yourself as a *required reviewer*, so that every publication waits for your approval
+   (a package version on nuget.org can be hidden but never deleted).
+4. GitHub, Settings, Secrets and variables, Actions, **Variables**: define `NUGET_USER` with your nuget.org *profile name* (not your e-mail address).
+   Without this variable the `nuget` job is skipped, so a tag never fails because nuget.org is not set up yet.
+
+### Publishing a tag that already has a GitHub release
+
+Actions, **Release**, *Run workflow*, and give the tag (`v1.0.0`). The build runs again from that tag, the existing GitHub release is left alone, and the `nuget` job
+asks for your approval before pushing. `--skip-duplicate` makes a second run harmless.
+
+### The Forgejo registry
+
+Forgejo Actions has no equivalent of Trusted Publishing, and without a runner `.forgejo/workflows/release.yml` does not run. The `.nupkg` files of a GitHub release can be pushed to the
+Forgejo registry by hand:
 `dotnet nuget push <file> --source https://git.vbmaf.net/api/packages/sebastien/nuget/index.json --api-key <token with write:package>`.
 
 ## Using the packages

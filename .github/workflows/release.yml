@@ -1,22 +1,33 @@
-# When a version tag (v1.2.3) is pushed: builds, tests, packs, and publishes a GitHub release with the .nupkg files attached.
-# The push to nuget.org only happens when the secret NUGET_API_KEY (an API key scoped to the SFerrand.* packages) is defined. See RELEASING.md.
+# Release workflow. Two ways to start it:
+#   - push a version tag (v1.2.3): builds, tests, packs and creates a GitHub release with the packages attached;
+#   - run it by hand (Actions, Release, "Run workflow") with an existing tag: same thing for a tag that is already published
+#     (the GitHub release is left alone when it exists), which is how a version is sent to nuget.org afterwards.
+# Then, if the repository variable NUGET_USER is defined, the "nuget" job pushes the packages to nuget.org with Trusted Publishing:
+# no API key is stored, GitHub proves the identity of this workflow and nuget.org returns a key valid for one hour.
+# That job runs in the GitHub environment "nuget" (add required reviewers there to approve every publication). See RELEASING.md.
 name: Release
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag to build and publish (v1.2.3)'
+        required: true
 
-permissions:
-  contents: write   # to create the GitHub release
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    env:
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}   # a step condition can only read the job's env: empty means no push to nuget.org
+    permissions:
+      contents: write   # to create the GitHub release
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ format('refs/tags/{0}', env.TAG) }}
           fetch-depth: 0   # MinVer computes the version from the tags: it needs the whole history
       - uses: actions/setup-dotnet@v4
         with:
@@ -27,11 +38,10 @@ jobs:
       - name: Check the tag
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME}"
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$tag' is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$TAG' is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
           fi
-          echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
 
       - run: dotnet restore
       - run: dotnet build --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
@@ -53,12 +63,40 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "The GitHub release $TAG already exists: left as it is."; exit 0
+          fi
           # The notes are the section of CHANGELOG.md for this version.
           awk -v v="${VERSION}" 'index($0, "## [" v "]") == 1 {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
           prerelease=""; [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
-          gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg artifacts/*.snupkg --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+          gh release create "$TAG" artifacts/*.nupkg artifacts/*.snupkg --title "$TAG" --notes-file notes.md $prerelease
+
+  nuget:
+    needs: build
+    # Only when the repository variable NUGET_USER (the nuget.org profile name, not an e-mail address) is defined.
+    if: ${{ vars.NUGET_USER != '' }}
+    runs-on: ubuntu-latest
+    environment: nuget   # must match the "Environment" of the trusted publishing policy on nuget.org
+    permissions:
+      id-token: write    # lets GitHub issue the OIDC token that nuget.org checks
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts
+
+      # Asked for as late as possible: the temporary key is valid for one hour and each token is used once.
+      - name: NuGet login (OIDC to a temporary API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ vars.NUGET_USER }}
 
       - name: Push to nuget.org
-        if: ${{ env.NUGET_API_KEY != '' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         shell: bash
         run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
