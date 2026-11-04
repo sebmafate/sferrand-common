@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+
+- The package metadata (project URL, repository URL) and the README of `SFerrand.Http.Testing` pointed at the private Forgejo server; they now point at the GitHub repository.
+  Version 1.0.0 carries the old links.
+
 ## [1.0.0] - 2026-11-04
 
 First version.

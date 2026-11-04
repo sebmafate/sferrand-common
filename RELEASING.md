@@ -13,7 +13,7 @@ to edit in a project file.
 - A pre-release you want to publish deliberately is tagged explicitly: `v1.3.0-rc.1`.
 - Inside the DLL the *file* version is `MAJOR.MINOR.PATCH.0`, the *informational* version is the full number, and the *assembly*
   version is `MAJOR.0.0.0` (so a minor or patch update never forces a binding redirect). The package also embeds the commit hash
-  (`<repository commit="...">`) and SourceLink data pointing at the source on the Forgejo server, so a debugger can fetch
+  (`<repository commit="...">`) and SourceLink data pointing at the source on GitHub (the host of the checkout that builds the release), so a debugger can fetch
   the exact code of the version in use.
 
 ### Choosing the number ([Semantic Versioning](https://semver.org/))
