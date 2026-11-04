@@ -1,14 +1,19 @@
-# Publishes the NuGet package to nuget.org when a version tag (v1.2.3) is pushed. See RELEASING.md.
-# Secret to define: NUGET_API_KEY (a nuget.org API key scoped to the SFerrand.* packages).
+# When a version tag (v1.2.3) is pushed: builds, tests, packs, and publishes a GitHub release with the .nupkg files attached.
+# The push to nuget.org only happens when the secret NUGET_API_KEY (an API key scoped to the SFerrand.* packages) is defined. See RELEASING.md.
 name: Release
 
 on:
   push:
     tags: ['v*']
 
+permissions:
+  contents: write   # to create the GitHub release
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}   # a step condition can only read the job's env: empty means no push to nuget.org
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,8 +48,17 @@ jobs:
           name: nupkg
           path: artifacts/*
 
-      - name: Push to nuget.org
+      - name: Create the GitHub release
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # The notes are the section of CHANGELOG.md for this version.
+          awk -v v="${VERSION}" 'index($0, "## [" v "]") == 1 {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
+          prerelease=""; [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
+          gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg artifacts/*.snupkg --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+
+      - name: Push to nuget.org
+        if: ${{ env.NUGET_API_KEY != '' }}
         shell: bash
         run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate

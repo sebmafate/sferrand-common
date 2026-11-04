@@ -69,6 +69,11 @@ resets it to the public URL first.
    (and to nuget.org if `NUGET_API_KEY` is set). `--skip-duplicate` makes a re-run harmless.
 6. Check the package appears under the user's *Packages* page.
 
+On GitHub, the same tag runs `.github/workflows/release.yml`: it builds, tests and packs, then creates a **GitHub release** named after the tag, whose notes are the
+matching section of the changelog and which carries the `.nupkg` and `.snupkg` files. It pushes to nuget.org only when the secret `NUGET_API_KEY` exists.
+Without a Forgejo runner, the `.nupkg` files of that release can be pushed to the Forgejo registry by hand:
+`dotnet nuget push <file> --source https://git.vbmaf.net/api/packages/sebastien/nuget/index.json --api-key <token with write:package>`.
+
 ## Using the packages
 
 From the Forgejo registry (private: it needs credentials):
