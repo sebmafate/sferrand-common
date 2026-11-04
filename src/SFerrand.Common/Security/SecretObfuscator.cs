@@ -13,6 +13,7 @@ namespace SFerrand.Common.Security;
 /// Masking is length-preserving and deterministic (same input, same output), so masked values stay comparable
 /// across log lines. It is a logging aid, <b>not</b> a security boundary: never use it to "protect" data at rest or in transit.
 /// </para>
+/// <para>For payment card numbers, IBAN and RIB, which have a layout worth preserving, see <see cref="FinancialObfuscator"/>.</para>
 /// </remarks>
 public static class SecretObfuscator
 {
